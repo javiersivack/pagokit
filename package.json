@@ -1,0 +1,31 @@
+{
+  "name": "pagokit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Next.js starter for Mercado Pago payments: signed webhooks, server-side verification, out-of-order safe order state.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "webhook:test": "node scripts/send-test-webhook.mjs"
+  },
+  "dependencies": {
+    "next": "16.3.8",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.8",
+    "typescript": "^5",
+    "vitest": "^4"
+  }
+}
