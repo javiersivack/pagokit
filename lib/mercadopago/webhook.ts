@@ -142,7 +142,12 @@ export async function processPayment(
   const orderId = payment.external_reference;
   const order = orderId ? await deps.store.get(orderId) : null;
   if (!order) {
-    log.warn("payment without a matching order", { paymentId: payment.id, externalReference: orderId });
+    log.warn("payment without a matching order", {
+      paymentId: payment.id,
+      externalReference: orderId,
+      status: payment.status,
+      statusDetail: payment.status_detail,
+    });
     return { status: 200, outcome: "order_not_found" };
   }
 
