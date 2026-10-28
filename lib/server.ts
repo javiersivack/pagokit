@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { createClient, type MercadoPagoClient } from "@/lib/mercadopago/client";
 import type { Logger, WebhookDeps, WebhookHooks } from "@/lib/mercadopago/webhook";
 import { createMemoryStore, type OrderStore } from "@/lib/orders";
@@ -44,5 +45,7 @@ export function webhookDeps(): WebhookDeps {
     hooks,
     logger,
     requireLiveMode: process.env.MP_REQUIRE_LIVE_MODE === "true",
+    // Los efectos corren después de responder a Mercado Pago.
+    defer: after,
   };
 }

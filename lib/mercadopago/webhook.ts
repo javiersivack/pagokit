@@ -30,6 +30,10 @@ export interface WebhookDeps {
   requireLiveMode?: boolean;
   // Handlers para otros topics (p. ej. suscripciones). Reciben el data.id ya verificado por firma.
   topics?: Record<string, TopicHandler>;
+  // Corre onStatusChange después de responder (en la ruta: `after` de next/server), para que un
+  // hook lento (mandar un mail, llamar a otra API) no demore la respuesta a Mercado Pago, que
+  // espera 22 s. Sin esto, el hook corre antes de responder.
+  defer?: (task: () => Promise<void>) => void;
 }
 
 export type TopicHandler = (dataId: string, log: Logger) => Promise<WebhookResult>;
@@ -131,7 +135,7 @@ export function lookupFailure(err: unknown, log: Logger, context: Record<string,
 // Aplica un pago (ya leído de la API) a su orden. Lo usan el webhook y la conciliación.
 export async function processPayment(
   payment: Payment,
-  deps: Pick<WebhookDeps, "store" | "hooks" | "logger" | "requireLiveMode">,
+  deps: Pick<WebhookDeps, "store" | "hooks" | "logger" | "requireLiveMode" | "defer">,
 ): Promise<WebhookResult> {
   const log = deps.logger ?? silentLogger;
   if (deps.requireLiveMode && payment.live_mode === false) {
@@ -192,11 +196,15 @@ export async function processPayment(
 
   const updated = (await deps.store.get(order.id)) ?? { ...order, status: target, paymentId: payment.id };
   log.info("order updated", { orderId: order.id, from: order.status, to: target, paymentId: payment.id });
-  try {
-    await deps.hooks?.onStatusChange?.(updated, order.status, payment);
-  } catch (err) {
-    // El estado ya cambió: reintentar el webhook no volvería a disparar el hook.
-    log.error("onStatusChange hook failed", { orderId: order.id, error: (err as Error).message });
-  }
+  const runHook = async () => {
+    try {
+      await deps.hooks?.onStatusChange?.(updated, order.status, payment);
+    } catch (err) {
+      // El estado ya cambió: reintentar el webhook no volvería a disparar el hook.
+      log.error("onStatusChange hook failed", { orderId: order.id, error: (err as Error).message });
+    }
+  };
+  if (deps.hooks?.onStatusChange && deps.defer) deps.defer(runHook);
+  else await runHook();
   return { status: 200, outcome: mismatch ? "amount_mismatch" : "updated", orderId: order.id, orderStatus: target };
 }

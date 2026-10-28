@@ -158,4 +158,34 @@ describe("handleWebhook", () => {
     const result = await handleWebhook(signedRequest("111"), deps(store, async () => payment(), { hooks: { onStatusChange } }));
     expect(result).toMatchObject({ status: 200, outcome: "updated" });
   });
+
+  it("with defer, answers before running the side-effect hook", async () => {
+    const store = await storeWith(order());
+    const onStatusChange = vi.fn();
+    const deferred: Array<() => Promise<void>> = [];
+    const result = await handleWebhook(
+      signedRequest("111"),
+      deps(store, async () => payment(), { hooks: { onStatusChange }, defer: (task) => void deferred.push(task) }),
+    );
+    expect(result).toMatchObject({ status: 200, outcome: "updated" });
+    expect(onStatusChange).not.toHaveBeenCalled();
+    await deferred[0]!();
+    expect(onStatusChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("with defer, a failing hook is logged and does not throw", async () => {
+    const store = await storeWith(order());
+    const error = vi.fn();
+    const deferred: Array<() => Promise<void>> = [];
+    await handleWebhook(
+      signedRequest("111"),
+      deps(store, async () => payment(), {
+        hooks: { onStatusChange: async () => { throw new Error("email down"); } },
+        logger: { info() {}, warn() {}, error },
+        defer: (task) => void deferred.push(task),
+      }),
+    );
+    await expect(deferred[0]!()).resolves.toBeUndefined();
+    expect(error).toHaveBeenCalledWith("onStatusChange hook failed", expect.anything());
+  });
 });

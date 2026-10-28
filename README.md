@@ -67,7 +67,8 @@ WHERE id = $1 AND status = $2;   -- rowCount = 1 → cambió; 0 → otro webhook
 ### Tus efectos
 
 En `lib/server.ts`, `hooks.onStatusChange(order, from, payment)` se llama una vez por cambio de
-estado. Si tu hook falla, el error queda en el log y el estado no se revierte. Si necesitás
+estado y corre después de responderle a Mercado Pago (con `after` de Next.js), así un hook lento
+no hace que el aviso se dé por perdido. Si tu hook falla, el error queda en el log y el estado no se revierte. Si necesitás
 garantías de entrega (emails, provisión), usá una tabla outbox.
 
 ### Otros topics
