@@ -87,6 +87,14 @@ conciliación para webhooks que nunca llegaron y emails de aviso.
 
 `npm run dev` · `npm test` · `npm run lint` · `npm run typecheck` · `npm run build`
 
+## Quién lo hizo
+
+Javier Sivack, ingeniero backend (pagos, sistemas bancarios, integraciones de APIs). Está hecho
+con Claude, una IA, como compañero de programación: yo lo dirijo, lo pruebo contra Mercado
+Pago real y respondo por él. Cada caso tiene su test; si encontrás un error, abrí un issue.
+
+¿Necesitás una integración a medida? https://javiersivack.com/es#contact
+
 ## Licencia
 
 MIT.
