@@ -180,6 +180,15 @@ export async function processPayment(
   // otro pago rechazado con la misma referencia no la toca.
   const otherPayment = order.paymentId !== undefined && order.paymentId !== payment.id;
   if (!canTransition(order.status, target) || (otherPayment && order.status !== "pending" && order.status !== "failed")) {
+    // Se deja registro del aviso descartado: si alguien reclama "mi pago no se procesó", acá se
+    // ve que sí se procesó, en otro aviso.
+    log.info("notification discarded: order already in a later state", {
+      orderId: order.id,
+      paymentId: payment.id,
+      orderStatus: order.status,
+      paymentStatus: payment.status,
+      orderPaymentId: order.paymentId,
+    });
     return {
       status: 200,
       outcome: mismatch ? "amount_mismatch" : "no_change",
@@ -191,6 +200,12 @@ export async function processPayment(
   const changed = await deps.store.transition(order.id, order.status, target, { paymentId: payment.id });
   if (!changed) {
     // Otro webhook concurrente ganó la carrera; ese es el que dispara los efectos.
+    log.info("notification discarded: a concurrent notification updated the order first", {
+      orderId: order.id,
+      paymentId: payment.id,
+      from: order.status,
+      to: target,
+    });
     return { status: 200, outcome: "no_change", orderId: order.id };
   }
 

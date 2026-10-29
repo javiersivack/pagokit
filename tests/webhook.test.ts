@@ -51,6 +51,30 @@ describe("handleWebhook", () => {
     expect(onStatusChange).toHaveBeenCalledTimes(1);
   });
 
+  it("logs the discarded notification so a 'missing' payment can be traced", async () => {
+    const store = await storeWith(order({ status: "paid", paymentId: "111" }));
+    const info = vi.fn();
+    const logger = { info, warn() {}, error() {} };
+    await handleWebhook(signedRequest("111"), deps(store, async () => payment(), { logger }));
+    expect(info).toHaveBeenCalledWith(
+      "notification discarded: order already in a later state",
+      expect.objectContaining({ orderId: "order-1", paymentId: "111", orderStatus: "paid" }),
+    );
+  });
+
+  it("logs when a concurrent notification wins the race", async () => {
+    const store = await storeWith(order());
+    const info = vi.fn();
+    const logger = { info, warn() {}, error() {} };
+    const racing: OrderStore = { create: (o) => store.create(o), get: (id) => store.get(id), transition: async () => false };
+    const result = await handleWebhook(signedRequest("111"), deps(racing, async () => payment(), { logger }));
+    expect(result.outcome).toBe("no_change");
+    expect(info).toHaveBeenCalledWith(
+      "notification discarded: a concurrent notification updated the order first",
+      expect.objectContaining({ orderId: "order-1", from: "pending", to: "paid" }),
+    );
+  });
+
   it("ignores a late 'pending' that arrives after 'approved'", async () => {
     const store = await storeWith(order({ status: "paid", paymentId: "111" }));
     const result = await handleWebhook(signedRequest("111"), deps(store, async () => payment({ status: "pending" })));
