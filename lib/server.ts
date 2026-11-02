@@ -23,9 +23,12 @@ export function orderStore(): OrderStore {
   return (globalForStore.pagokitStore ??= createMemoryStore());
 }
 
+// Solo para pruebas: apuntar a un Mercado Pago falso (por ejemplo, Simulacro). Vacío = el real.
+export const apiBaseUrl = () => process.env.MP_API_BASE_URL?.replace(/\/+$/, "") || undefined;
+
 let client: MercadoPagoClient | undefined;
 export function mercadoPago(): MercadoPagoClient {
-  return (client ??= createClient({ accessToken: requireEnv("MP_ACCESS_TOKEN") }));
+  return (client ??= createClient({ accessToken: requireEnv("MP_ACCESS_TOKEN"), baseUrl: apiBaseUrl() }));
 }
 
 const hooks: WebhookHooks = {

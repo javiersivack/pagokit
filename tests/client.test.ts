@@ -21,6 +21,12 @@ describe("createClient", () => {
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer TEST-token");
   });
 
+  it("uses another base URL when given one (e.g. a fake Mercado Pago for tests)", async () => {
+    const fetchImpl = vi.fn(async () => json(200, paymentJson));
+    await createClient({ accessToken: "TEST-token", baseUrl: "https://fake.test/api/mp/abc", fetchImpl }).getPayment("111");
+    expect((fetchImpl.mock.calls[0] as unknown as [string])[0]).toBe("https://fake.test/api/mp/abc/v1/payments/111");
+  });
+
   it("retries 429 and 5xx, then succeeds", async () => {
     const fetchImpl = vi
       .fn()
